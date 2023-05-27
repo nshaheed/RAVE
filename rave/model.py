@@ -89,6 +89,7 @@ class RAVE(pl.LightningModule):
         update_discriminator_every: int = 2,
         enable_pqmf_encode: bool = True,
         enable_pqmf_decode: bool = True,
+        learning_rate: float = 1e-4,
     ):
         super().__init__()
 
@@ -140,8 +141,8 @@ class RAVE(pl.LightningModule):
         gen_p += list(self.decoder.parameters())
         dis_p = list(self.discriminator.parameters())
 
-        gen_opt = torch.optim.Adam(gen_p, 1e-4, (.5, .9))
-        dis_opt = torch.optim.Adam(dis_p, 1e-4, (.5, .9))
+        gen_opt = torch.optim.Adam(gen_p, learning_rate, (.5, .9))
+        dis_opt = torch.optim.Adam(dis_p, learning_rate, (.5, .9))
 
         return gen_opt, dis_opt
 

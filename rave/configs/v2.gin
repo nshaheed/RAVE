@@ -20,6 +20,7 @@ DILATIONS = [
 RATIOS = [4, 4, 4, 2]
 CAPACITY = 96
 NOISE_AUGMENTATION = 0
+LEARNING_RATE = 1e-4
 
 core.AudioDistanceV1.log_epsilon = 1e-7
 
@@ -93,4 +94,5 @@ rave.RAVE:
     num_skipped_features = 1
     decoder = @blocks.GeneratorV2
     update_discriminator_every = 4
+    learning_rate = %LEARNING_RATE
     
