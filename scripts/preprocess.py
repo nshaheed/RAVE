@@ -46,6 +46,9 @@ flags.DEFINE_multi_string(
 flags.DEFINE_bool('lazy',
                   default=False,
                   help='Decode and resample audio samples.')
+flags.DEFINE_bool('polyphonic',
+                  default=False,
+                  help='Combine audio samples to create dynamic polyphonic data.')
 flags.DEFINE_bool('dyndb',
                   default=True,
                   help="Allow the database to grow dynamically")
@@ -278,7 +281,7 @@ def main(argv):
             FLAGS.output_path,
             'metadata.yaml',
     ), 'w') as metadata:
-        yaml.safe_dump({'lazy': FLAGS.lazy, 'channels': FLAGS.channels, 'n_seconds': n_seconds, 'sr': FLAGS.sampling_rate}, metadata)
+        yaml.safe_dump({'lazy': FLAGS.lazy, 'polyphonic': FLAGS.polyphonic, 'channels': FLAGS.channels, 'n_seconds': n_seconds, 'sr': FLAGS.sampling_rate}, metadata)
     pool.close()
     env.close()
 
