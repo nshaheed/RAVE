@@ -3,7 +3,7 @@ import logging
 import math
 import os
 import subprocess
-from random import random
+from random import random, randint
 from typing import Dict, Iterable, Optional, Sequence, Union, Callable
 
 import gin
@@ -83,6 +83,23 @@ class AudioDataset(data.Dataset):
         return audio
 
 class PolyphonicAudioDataset(data.Dataset):
+
+    @property
+    def env(self) -> lmdb.Environment:
+        if self._env is None:
+            self._env = lmdb.open(self._db_path, lock=False)
+        return self._env
+
+    @property
+    def keys(self) -> Sequence[str]:
+        if self._keys is None:
+            with self.env.begin() as txn:
+                self._keys = list(txn.cursor().iternext(values=False))
+        return self._keys
+
+    def __len__(self):
+        return len(self.keys)
+
     def __init__(self,
                  db_path: str,
                  audio_key: str = 'waveform',
@@ -104,7 +121,7 @@ class PolyphonicAudioDataset(data.Dataset):
 
     def __getitem__(self, index):
         # get random idx as well as index
-        index_rand = random.randint(0, len(self.keys)-1)
+        index_rand = randint(0, len(self.keys)-1)
 
         with self.env.begin() as txn:
             ae1 = AudioExample.FromString(txn.get(self.keys[index]))
@@ -116,12 +133,12 @@ class PolyphonicAudioDataset(data.Dataset):
         assert buffer2.precision == AudioExample.Precision.INT16
 
         audio1 = np.frombuffer(buffer1.data, dtype=np.int16)
-        audio1 = audio.astype(np.float32) / (2**15 - 1)
-        audio1 = audio.reshape(self._n_channels, -1)
+        audio1 = audio1.astype(np.float32) / (2**15 - 1)
+        audio1 = audio1.reshape(self._n_channels, -1)
 
         audio2 = np.frombuffer(buffer2.data, dtype=np.int16)
-        audio2 = audio.astype(np.float32) / (2**15 - 1)
-        audio2 = audio.reshape(self._n_channels, -1)
+        audio2 = audio2.astype(np.float32) / (2**15 - 1)
+        audio2 = audio2.reshape(self._n_channels, -1)
 
         if self._transforms is not None:
             audio1 = self._transforms(audio1)
@@ -130,6 +147,7 @@ class PolyphonicAudioDataset(data.Dataset):
         # combine the two audio buffers. random cropping from
         # transforms should handle teh scrambling automatically
         audio = 0.5 * audio1 + 0.5 * audio2
+        return audio
 
 class LazyAudioDataset(data.Dataset):
 
