@@ -76,6 +76,7 @@ flags.DEFINE_bool('progress',
 flags.DEFINE_bool('smoke_test',
                   default=False,
                   help="Run training with n_batches=1 to test the model")
+flags.DEFINE_integer('n_voices', 1, help='Number of voices to mixdown with --polyphonic')
 
 
 class EMA(pl.Callback):
@@ -167,7 +168,9 @@ def main(argv):
                                        derivative=FLAGS.derivative,
                                        normalize=FLAGS.normalize,
                                        rand_pitch=FLAGS.rand_pitch,
-                                       n_channels=n_channels)
+                                       n_channels=n_channels,
+                                       n_voices=FLAGS.n_voices
+                                       )
     train, val = rave.dataset.split_dataset(dataset, 98)
 
     # get data-loader
