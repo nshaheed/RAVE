@@ -21,6 +21,8 @@ import rave.core
 import rave.dataset
 from rave.transforms import get_augmentations, add_augmentation
 
+from scipy.io.wavfile import write as write_wav
+
 
 FLAGS = flags.FLAGS
 
@@ -132,6 +134,47 @@ def parse_augmentations(augmentations):
         gin.clear_config()
     return get_augmentations()
 
+
+def export_audio_from_dataloader(dataloader, output_dir, n=10, sample_rate=44100):
+    """
+    Exports `n` audio samples from a PyTorch DataLoader to WAV files.
+    
+    Parameters:
+    - dataloader: a PyTorch DataLoader yielding NumPy arrays (1D or 2D audio).
+    - output_dir: directory where the wav files will be saved.
+    - n: number of audio samples to export.
+    - sample_rate: audio sampling rate, default 44100 Hz.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    count = 0
+
+    for batch in dataloader:
+        # Make sure batch is a NumPy array or convert it
+        if isinstance(batch, (list, tuple)):
+            batch = batch[0]  # Get first element if it's a tuple like (audio, label)
+
+        # Handle batch dimension
+        if batch.ndim == 1:
+            batch = batch[None, :]  # Convert to 2D for consistent handling
+
+        print(f'{batch.shape=}')
+        for i in range(batch.shape[0]):
+            audio = batch[i]
+            print(f'train.py[{i}]: {audio.shape=}')
+
+            # # Normalize if necessary to prevent clipping
+            # if audio.dtype != 'int16':
+            #     audio = audio / max(abs(audio.max()), abs(audio.min()), 1e-6)
+            #     audio = (audio * 32767).type('int16')
+
+            filename = os.path.join(output_dir, f"audio_{count}.wav")
+            print(f'{filename=}')
+            write_wav(filename, sample_rate, audio[0].numpy())
+            print('wrote wav file')
+            count += 1
+            if count >= n:
+                return
+
 def main(argv):
     torch.set_float32_matmul_precision('high')
     torch.backends.cudnn.benchmark = True
@@ -183,6 +226,10 @@ def main(argv):
                        drop_last=True,
                        num_workers=num_workers)
     val = DataLoader(val, FLAGS.batch, False, num_workers=num_workers)
+
+    # exports for debugging (comment this out to actually train)
+    # export_audio_from_dataloader(train, output_dir="/user/n/nshaheed/Library/Web/tmp/loader_outputs", n=10)
+    # return
 
     # CHECKPOINT CALLBACKS
     validation_checkpoint = pl.callbacks.ModelCheckpoint(monitor="validation",

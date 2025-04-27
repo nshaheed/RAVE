@@ -104,6 +104,7 @@ class PolyphonicAudioDataset(data.Dataset):
                  db_path: str,
                  audio_key: str = 'waveform',
                  transforms: Optional[transforms.Transform] = None,
+                 voice_transforms: Optional[transforms.Transform] = None,
                  n_channels: int = 1,
                  n_voices: int = 1) -> None:
         super().__init__()
@@ -112,6 +113,7 @@ class PolyphonicAudioDataset(data.Dataset):
         self._env = None
         self._keys = None
         self._transforms = transforms
+        self._voice_transforms = voice_transforms
         self._n_channels = n_channels
         self._n_voices = n_voices
         lens = []
@@ -123,7 +125,11 @@ class PolyphonicAudioDataset(data.Dataset):
 
     def __getitem__(self, index):
         audios = []
-        for i in range(self._n_voices):
+
+        # choose a random number of voices from 1 to n_voices
+        voice_count = randint(1, self._n_voices)
+
+        for i in range(voice_count):
             # the first voice is passed by get item, the rest are random
             idx = index if i == 0 else randint(0, len(self.keys)-1)
 
@@ -137,8 +143,8 @@ class PolyphonicAudioDataset(data.Dataset):
             audio = audio.astype(np.float32) / (2**15 - 1)
             audio = audio.reshape(self._n_channels, -1)
 
-            if self._transforms is not None:
-                audio = self._transforms(audio)
+            if self._voice_transforms is not None:
+                audio = self._voice_transforms(audio)
 
             audios.append(audio)
 
@@ -300,26 +306,46 @@ def get_dataset(db_path,
         transforms.Dequantize(16),
     ]
 
+    voice_transform_list = [
+        lambda x: x.astype(np.float32),
+        transforms.RandomCrop(n_signal),
+        transforms.RandomApply(
+            lambda x: random_phase_mangle(x, 20, 2000, .99, sr_dataset),
+            p=.8,
+        ),
+        transforms.Dequantize(16),
+    ]
+
     if rand_pitch:
         rand_pitch = list(map(float, rand_pitch))
         assert len(rand_pitch) == 2, "rand_pitch must be given two floats"
         transform_list.insert(1, transforms.RandomPitch(n_signal, rand_pitch))
+        voice_transform_list.insert(1, transforms.RandomPitch(n_signal, rand_pitch))
 
     if sr_dataset != sr:
         transform_list.append(transforms.Resample(sr_dataset, sr))
+        voice_transform_list.append(transforms.Resample(sr_dataset, sr))
 
     if normalize:
         transform_list.append(normalize_signal)
+        voice_transform_list.append(normalize_signal)
 
     if derivative:
         transform_list.append(get_derivator_integrator(sr)[0])
+        voice_transform_list.append(get_derivator_integrator(sr)[0])
 
     if augmentations:
         transform_list.extend(augmentations)
+        voice_transform_list.extend(augmentations)
+
+        # remove mute if found
+        voice_transform_list = [tr for tr in voice_transform_list if type(tr) is not transforms.RandomMute]
 
     transform_list.append(lambda x: x.astype(np.float32))
+    voice_transform_list.append(lambda x: x.astype(np.float32))
 
     transform_list = transforms.Compose(transform_list)
+    voice_transform_list = transforms.Compose(voice_transform_list)
 
     if lazy:
         return LazyAudioDataset(db_path, n_signal, sr_dataset, transform_list, n_channels)
@@ -327,6 +353,7 @@ def get_dataset(db_path,
         return PolyphonicAudioDataset(
             db_path,
             transforms=transform_list,
+            voice_transforms=voice_transform_list,
             n_channels=n_channels,
             n_voices=n_voices
         )

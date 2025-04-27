@@ -1,0 +1,25 @@
+from __gin__ import dynamic_registration
+
+import rave
+from rave import transforms
+from rave import dataset
+
+include "configs/brave.gin"
+
+# AUGMENTATIONS
+dataset.get_dataset:
+    augmentations = [
+        @augmentations/transforms.RandomCompress(),
+	@augmentations/transforms.RandomMute(),
+	@augmentations/transforms.RandomGain(),
+        # @augmentations/transforms.FrequencyMasking()
+    ]
+
+
+augmentations/transforms.RandomGain:
+	gain_range = [-9, 0]
+
+augmentations/transforms.RandomCompress:
+    amp_range = [-60,-20]
+    threshold=-40
+    prob = 0.5
