@@ -20,3 +20,10 @@ using brave and incorporating suggestions from attempt 1:
 '''
 python scripts/train.py --config brave_poly --db_path /scratch/nshaheed/rave_poly/preprocess/ --out_path /scratch/nshaheed/rave_poly/models/ --name vctk_4_voice_brave --channels 1 --n_voices 4 --gpu 0
 '''
+
+# attempt 3 (single voice)
+Here I'm just trying to train a VCTK stand-in (i.e. one voice) to get a 1:1 comparison
+
+'''
+python scripts/train.py --config brave_poly --db_path /scratch/nshaheed/rave_poly/preprocess/ --out_path /scratch/nshaheed/rave_poly/models/ --name vctk_brave --channels 1 --n_voices 1 --gpu 0
+'''
